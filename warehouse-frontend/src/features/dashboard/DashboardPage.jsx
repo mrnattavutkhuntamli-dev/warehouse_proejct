@@ -1,23 +1,44 @@
 import { useState } from "react";
 import {
-  Package, AlertTriangle, Wrench, ShoppingCart,
-  TrendingUp, TrendingDown, RefreshCw, DollarSign,
-  BarChart3, Activity,
+  Package,
+  AlertTriangle,
+  Wrench,
+  ShoppingCart,
+  TrendingUp,
+  TrendingDown,
+  RefreshCw,
+  DollarSign,
+  BarChart3,
+  Activity,
 } from "lucide-react";
 import {
   ResponsiveContainer,
-  LineChart, Line,
-  BarChart, Bar,
-  AreaChart, Area,
-  PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  AreaChart,
+  Area,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
   Legend,
 } from "recharts";
 import { PageHeader } from "@/components/common/PageHeader";
 import { StatCard } from "@/components/common/StatCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartCard, ChartTooltip } from "@/components/charts/ChartCard";
-import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -33,91 +54,125 @@ import { cn } from "@/utils/cn";
 
 // ── chart color palette ── matches Industrial Dark theme ──────────────────────
 const COLORS = {
-  brand:   "#f59e0b",
+  brand: "#f59e0b",
   success: "#10b981",
-  info:    "#3b82f6",
-  danger:  "#ef4444",
-  purple:  "#8b5cf6",
-  pink:    "#ec4899",
-  teal:    "#14b8a6",
-  orange:  "#f97316",
+  info: "#3b82f6",
+  danger: "#ef4444",
+  purple: "#8b5cf6",
+  pink: "#ec4899",
+  teal: "#14b8a6",
+  orange: "#f97316",
 };
 const PALETTE = Object.values(COLORS);
 
 // ── shared Recharts axis/grid styles ─────────────────────────────────────────
-const AXIS_STYLE = { fill: "#64748b", fontSize: 11, fontFamily: "var(--font-mono)" };
+const AXIS_STYLE = {
+  fill: "#64748b",
+  fontSize: 11,
+  fontFamily: "var(--font-mono)",
+};
 const GRID_STYLE = { stroke: "#1e293b", strokeDasharray: "3 3" };
 
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
   const [movementDays, setMovementDays] = useState("30");
-  const [topN, setTopN]                 = useState("10");
+  const [topN, setTopN] = useState("10");
 
-  const { data: overview, isLoading: ovLoading, refetch: refetchAll } = useDashboardOverview();
+  const {
+    data: overview,
+    isLoading: ovLoading,
+    refetch: refetchAll,
+  } = useDashboardOverview();
+
   const { data: invValue, isLoading: invLoading } = useInventoryValue();
-  const { data: topIssued, isLoading: topLoading } = useTopIssuedMaterials({ limit: Number(topN) });
+  const { data: topIssued, isLoading: topLoading } = useTopIssuedMaterials({
+    limit: Number(topN),
+  });
   const { data: supplierStats, isLoading: supLoading } = useSupplierStats();
-  const { data: movement, isLoading: movLoading } = useStockMovement({ days: Number(movementDays) });
+  const { data: movement, isLoading: movLoading } = useStockMovement({
+    days: Number(movementDays),
+  });
   const { data: toolUtil, isLoading: toolLoading } = useToolUtilization();
 
   // ── KPI helpers ──────────────────────────────────────────────────────────
-  const tool = overview?.toolAvailability ?? {};
-  const toolUtilRate = tool.total > 0
-    ? Math.round((tool.borrowed / tool.total) * 100)
-    : 0;
+  // overview.tools = { available, borrowed }  (no .total from API)
+  const tool = overview?.tools ?? {};
+  const toolTotal = (tool.available ?? 0) + (tool.borrowed ?? 0);
+  const toolUtilRate =
+    toolTotal > 0 ? Math.round(((tool.borrowed ?? 0) / toolTotal) * 100) : 0;
 
-  // ── Inventory value → pie data ────────────────────────────────────────────
-  const invPieData = (invValue?.categories ?? []).map((c, i) => ({
-    name:  c.name,
-    value: c.totalValue,
-    color: PALETTE[i % PALETTE.length],
-  }));
-  const totalInvValue = invPieData.reduce((s, d) => s + d.value, 0);
+  // ── Inventory value → group breakdown[] by category then sum ─────────────
+  // API: invValue.breakdown[].{ category(string), totalValue }
+  const categoryMap = new Map();
+  for (const item of invValue?.breakdown ?? []) {
+    categoryMap.set(
+      item.category,
+      (categoryMap.get(item.category) ?? 0) + (item.totalValue ?? 0),
+    );
+  }
+  const invPieData = Array.from(categoryMap.entries()).map(
+    ([name, value], i) => ({
+      name,
+      value,
+      color: PALETTE[i % PALETTE.length],
+    }),
+  );
+  const totalInvValue = invValue?.totalInventoryValue ?? 0;
 
-  // ── Stock movement → line/area data ──────────────────────────────────────
-  const movData = (movement?.data ?? []).map(d => ({
+  // ── Stock movement → area data  (API: movement.trend[]) ──────────────────
+  const movData = (movement?.trend ?? []).map((d) => ({
     date: formatDate(d.date, "dd/MM"),
-    เข้า: d.totalIn  ?? 0,
-    ออก:  d.totalOut ?? 0,
-    net:  (d.totalIn ?? 0) - (d.totalOut ?? 0),
+    เข้า: d.totalIn ?? 0,
+    ออก: d.totalOut ?? 0,
+    net: (d.totalIn ?? 0) - (d.totalOut ?? 0),
   }));
 
-  // ── Tool utilization → donut data ────────────────────────────────────────
-  const toolPieData = toolUtil?.categories?.length > 0
-    ? toolUtil.categories.map((c, i) => ({
-        name:     c.name,
-        borrowed: c.borrowed,
-        available: c.available,
-        total:    c.total,
-        color:    PALETTE[i % PALETTE.length],
-      }))
-    : null;
+  // ── Tool utilization donut  (API: toolUtil.overall) ───────────────────────
+  const overall = toolUtil?.overall ?? {};
+  const toolDonutData =
+    (overall.total ?? 0) > 0
+      ? [
+          {
+            name: "ว่าง",
+            value: overall.available ?? 0,
+            color: COLORS.success,
+          },
+          { name: "ถูกยืม", value: overall.borrowed ?? 0, color: COLORS.brand },
+          {
+            name: "ซ่อมบำรุง",
+            value: overall.maintenance ?? 0,
+            color: COLORS.info,
+          },
+          { name: "ชำรุด", value: overall.broken ?? 0, color: COLORS.danger },
+        ].filter((d) => d.value > 0)
+      : [];
 
-  const toolDonutData = tool.total > 0
-    ? [
-        { name: "ว่าง",       value: tool.available   ?? 0, color: COLORS.success },
-        { name: "ถูกยืม",     value: tool.borrowed    ?? 0, color: COLORS.brand },
-        { name: "ซ่อมบำรุง",  value: tool.maintenance ?? 0, color: COLORS.info },
-        { name: "ชำรุด",      value: tool.broken      ?? 0, color: COLORS.danger },
-      ].filter(d => d.value > 0)
-    : [];
+  // ── Tool by category  (API: toolUtil.byCategory[]) ───────────────────────
+  const toolPieData =
+    (toolUtil?.byCategory ?? []).length > 0
+      ? toolUtil.byCategory.map((c, i) => ({
+          name: c.categoryName,
+          borrowed: c.borrowed,
+          available: c.available,
+          total: c.total,
+          color: PALETTE[i % PALETTE.length],
+        }))
+      : null;
 
-  // ── Supplier stats → bar data ─────────────────────────────────────────────
-  const supData = (supplierStats?.suppliers ?? [])
-    .slice(0, 8)
-    .map(s => ({
-      name:   s.name?.length > 14 ? s.name.slice(0, 14) + "…" : s.name,
-      PO:     s.poCount,
-      มูลค่า: s.totalAmount,
-    }));
+  // ── Supplier stats  (API: array directly, field = totalPOs) ──────────────
+  const supData = (supplierStats ?? []).slice(0, 8).map((s) => ({
+    name: s.name?.length > 14 ? s.name.slice(0, 14) + "…" : s.name,
+    PO: s.totalPOs,
+    มูลค่า: s.totalPurchaseValue,
+  }));
 
-  // ── Top issued → bar data ─────────────────────────────────────────────────
-  const topData = (topIssued?.data ?? []).map(m => ({
-    name:   m.name?.length > 16 ? m.name.slice(0, 16) + "…" : m.name,
-    เบิก:   m.totalIssued,
-    code:   m.code,
-    unit:   m.unit,
+  // ── Top issued  (API: topIssued.items[]) ─────────────────────────────────
+  const topData = (topIssued?.items ?? []).map((m) => ({
+    name: m.name?.length > 16 ? m.name.slice(0, 16) + "…" : m.name,
+    เบิก: m.totalIssued,
+    code: m.code,
+    unit: m.unit,
   }));
 
   return (
@@ -127,7 +182,8 @@ export default function DashboardPage() {
         subtitle="ภาพรวมและสถิติระบบจัดการคลังสินค้า"
         actions={
           <Button variant="ghost" size="sm" onClick={() => refetchAll()}>
-            <RefreshCw className="w-3.5 h-3.5" />รีเฟรช
+            <RefreshCw className="w-3.5 h-3.5" />
+            รีเฟรช
           </Button>
         }
       />
@@ -136,7 +192,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title="วัสดุทั้งหมด"
-          value={overview?.totalMaterials}
+          value={overview?.materials?.total}
           icon={<Package />}
           description="รายการที่ active"
           color="amber"
@@ -144,7 +200,7 @@ export default function DashboardPage() {
         />
         <StatCard
           title="สต็อกต่ำ"
-          value={overview?.lowStockCount}
+          value={overview?.materials?.lowStock}
           icon={<AlertTriangle />}
           description="ต้องสั่งซื้อเพิ่ม"
           color="red"
@@ -152,7 +208,7 @@ export default function DashboardPage() {
         />
         <StatCard
           title="PO รอดำเนินการ"
-          value={overview?.pendingPOs}
+          value={overview?.procurement?.pendingPurchaseOrders}
           icon={<ShoppingCart />}
           description="DRAFT + APPROVED"
           color="blue"
@@ -160,9 +216,9 @@ export default function DashboardPage() {
         />
         <StatCard
           title="เครื่องมือว่าง"
-          value={tool?.available}
+          value={overview?.tools?.available}
           icon={<Wrench />}
-          description={`ถูกยืม ${tool?.borrowed ?? 0} · ทั้งหมด ${tool?.total ?? 0}`}
+          description={`ถูกยืม ${tool?.borrowed ?? 0} · ทั้งหมด ${toolTotal}`}
           color="green"
           loading={ovLoading}
         />
@@ -206,13 +262,15 @@ export default function DashboardPage() {
             <div className="skeleton h-7 w-24 rounded" />
           ) : (
             <p className="text-2xl font-bold font-mono tabular-nums text-[var(--color-info)]">
-              {toolUtilRate}%
+              {toolUtil?.overall?.utilizationRate ?? toolUtilRate}%
             </p>
           )}
           <div className="mt-2 h-1.5 bg-[var(--color-surface-3)] rounded-full overflow-hidden">
             <div
               className="h-full rounded-full bg-[var(--color-info)] transition-all duration-700"
-              style={{ width: `${toolUtilRate}%` }}
+              style={{
+                width: `${toolUtil?.overall?.utilizationRate ?? toolUtilRate}%`,
+              }}
             />
           </div>
         </div>
@@ -224,14 +282,14 @@ export default function DashboardPage() {
               <BarChart3 className="w-4 h-4 text-[var(--color-success)]" />
             </div>
             <p className="text-xs font-mono uppercase tracking-widest text-[var(--color-text-muted)]">
-              เบิกวัสดุเดือนนี้
+              ใบเบิกรอดำเนินการ
             </p>
           </div>
           {ovLoading ? (
             <div className="skeleton h-7 w-24 rounded" />
           ) : (
             <p className="text-2xl font-bold font-mono tabular-nums text-[var(--color-success)]">
-              {overview?.issuesThisMonth ?? "—"}
+              {overview?.procurement?.pendingMaterialIssues ?? "—"}
             </p>
           )}
           <p className="text-xs text-[var(--color-text-muted)] mt-1">ใบเบิก</p>
@@ -263,34 +321,80 @@ export default function DashboardPage() {
           }
         >
           <ResponsiveContainer width="100%" height={260}>
-            <AreaChart data={movData} margin={{ top: 10, right: 16, left: -10, bottom: 0 }}>
+            <AreaChart
+              data={movData}
+              margin={{ top: 10, right: 16, left: -10, bottom: 0 }}
+            >
               <defs>
                 <linearGradient id="gradIn" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor={COLORS.success} stopOpacity={0.3} />
-                  <stop offset="95%" stopColor={COLORS.success} stopOpacity={0} />
+                  <stop
+                    offset="5%"
+                    stopColor={COLORS.success}
+                    stopOpacity={0.3}
+                  />
+                  <stop
+                    offset="95%"
+                    stopColor={COLORS.success}
+                    stopOpacity={0}
+                  />
                 </linearGradient>
                 <linearGradient id="gradOut" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor={COLORS.danger} stopOpacity={0.3} />
-                  <stop offset="95%" stopColor={COLORS.danger} stopOpacity={0} />
+                  <stop
+                    offset="5%"
+                    stopColor={COLORS.danger}
+                    stopOpacity={0.3}
+                  />
+                  <stop
+                    offset="95%"
+                    stopColor={COLORS.danger}
+                    stopOpacity={0}
+                  />
                 </linearGradient>
               </defs>
               <CartesianGrid {...GRID_STYLE} />
-              <XAxis dataKey="date" tick={AXIS_STYLE} tickLine={false} axisLine={false} />
-              <YAxis tick={AXIS_STYLE} tickLine={false} axisLine={false} width={36} />
+              <XAxis
+                dataKey="date"
+                tick={AXIS_STYLE}
+                tickLine={false}
+                axisLine={false}
+              />
+              <YAxis
+                tick={AXIS_STYLE}
+                tickLine={false}
+                axisLine={false}
+                width={36}
+              />
               <RechartsTooltip
                 content={<ChartTooltip formatter={(v) => formatNumber(v, 0)} />}
-                cursor={{ stroke: "var(--color-border-strong)", strokeWidth: 1 }}
+                cursor={{
+                  stroke: "var(--color-border-strong)",
+                  strokeWidth: 1,
+                }}
               />
               <Legend
-                wrapperStyle={{ fontSize: 11, fontFamily: "var(--font-mono)", paddingTop: 8 }}
+                wrapperStyle={{
+                  fontSize: 11,
+                  fontFamily: "var(--font-mono)",
+                  paddingTop: 8,
+                }}
               />
               <Area
-                type="monotone" dataKey="เข้า" stroke={COLORS.success}
-                fill="url(#gradIn)" strokeWidth={2} dot={false} activeDot={{ r: 4 }}
+                type="monotone"
+                dataKey="เข้า"
+                stroke={COLORS.success}
+                fill="url(#gradIn)"
+                strokeWidth={2}
+                dot={false}
+                activeDot={{ r: 4 }}
               />
               <Area
-                type="monotone" dataKey="ออก" stroke={COLORS.danger}
-                fill="url(#gradOut)" strokeWidth={2} dot={false} activeDot={{ r: 4 }}
+                type="monotone"
+                dataKey="ออก"
+                stroke={COLORS.danger}
+                fill="url(#gradOut)"
+                strokeWidth={2}
+                dot={false}
+                activeDot={{ r: 4 }}
               />
             </AreaChart>
           </ResponsiveContainer>
@@ -309,8 +413,10 @@ export default function DashboardPage() {
               <PieChart>
                 <Pie
                   data={invPieData}
-                  cx="50%" cy="50%"
-                  innerRadius={42} outerRadius={68}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={42}
+                  outerRadius={68}
                   paddingAngle={3}
                   dataKey="value"
                   strokeWidth={0}
@@ -320,7 +426,9 @@ export default function DashboardPage() {
                   ))}
                 </Pie>
                 <RechartsTooltip
-                  content={<ChartTooltip formatter={(v) => formatCurrency(v)} />}
+                  content={
+                    <ChartTooltip formatter={(v) => formatCurrency(v)} />
+                  }
                 />
               </PieChart>
             </ResponsiveContainer>
@@ -328,16 +436,23 @@ export default function DashboardPage() {
             {/* Legend */}
             <div className="flex-1 overflow-y-auto space-y-1 px-2 pb-1">
               {invPieData.slice(0, 5).map((d) => (
-                <div key={d.name} className="flex items-center justify-between gap-2 text-xs">
+                <div
+                  key={d.name}
+                  className="flex items-center justify-between gap-2 text-xs"
+                >
                   <div className="flex items-center gap-1.5 min-w-0">
-                    <span className="w-2 h-2 rounded-full shrink-0" style={{ background: d.color }} />
-                    <span className="text-[var(--color-text-muted)] truncate">{d.name}</span>
+                    <span
+                      className="w-2 h-2 rounded-full shrink-0"
+                      style={{ background: d.color }}
+                    />
+                    <span className="text-[var(--color-text-muted)] truncate">
+                      {d.name}
+                    </span>
                   </div>
                   <span className="font-mono tabular-nums text-[var(--color-text-secondary)] shrink-0">
                     {totalInvValue > 0
                       ? `${Math.round((d.value / totalInvValue) * 100)}%`
-                      : "—"
-                    }
+                      : "—"}
                   </span>
                 </div>
               ))}
@@ -354,6 +469,7 @@ export default function DashboardPage() {
           subtitle="เรียงตามจำนวนเบิกสะสม"
           loading={topLoading}
           empty={!topLoading && topData.length === 0}
+          emptyMessage="ยังไม่มีการเบิกวัสดุในช่วงนี้"
           height={280}
           className="lg:col-span-2"
           actions={
@@ -376,11 +492,18 @@ export default function DashboardPage() {
               margin={{ top: 4, right: 16, left: 0, bottom: 4 }}
             >
               <CartesianGrid {...GRID_STYLE} horizontal={false} />
-              <XAxis type="number" tick={AXIS_STYLE} tickLine={false} axisLine={false} />
+              <XAxis
+                type="number"
+                tick={AXIS_STYLE}
+                tickLine={false}
+                axisLine={false}
+              />
               <YAxis
-                type="category" dataKey="name"
+                type="category"
+                dataKey="name"
                 tick={{ ...AXIS_STYLE, fontSize: 10 }}
-                tickLine={false} axisLine={false}
+                tickLine={false}
+                axisLine={false}
                 width={110}
               />
               <RechartsTooltip
@@ -414,8 +537,8 @@ export default function DashboardPage() {
         <ChartCard
           title="สถานะเครื่องมือ"
           subtitle="สัดส่วน ว่าง / ยืม / ซ่อม"
-          loading={ovLoading || toolLoading}
-          empty={!ovLoading && toolDonutData.length === 0}
+          loading={toolLoading}
+          empty={!toolLoading && toolDonutData.length === 0}
           height={280}
         >
           <div className="flex flex-col h-full items-center">
@@ -423,8 +546,10 @@ export default function DashboardPage() {
               <PieChart>
                 <Pie
                   data={toolDonutData}
-                  cx="50%" cy="50%"
-                  innerRadius={48} outerRadius={72}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={48}
+                  outerRadius={72}
                   paddingAngle={4}
                   dataKey="value"
                   strokeWidth={0}
@@ -442,18 +567,28 @@ export default function DashboardPage() {
             {/* Center label */}
             <div className="text-center -mt-2 mb-3">
               <p className="text-3xl font-bold tabular-nums text-[var(--color-text-primary)]">
-                {tool.total ?? 0}
+                {overall.total ?? 0}
               </p>
-              <p className="text-xs text-[var(--color-text-muted)] font-mono">ชิ้นทั้งหมด</p>
+              <p className="text-xs text-[var(--color-text-muted)] font-mono">
+                ชิ้นทั้งหมด
+              </p>
             </div>
 
             {/* Legend */}
             <div className="w-full space-y-1.5 px-3">
               {toolDonutData.map((d) => (
-                <div key={d.name} className="flex items-center justify-between text-xs">
+                <div
+                  key={d.name}
+                  className="flex items-center justify-between text-xs"
+                >
                   <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ background: d.color }} />
-                    <span className="text-[var(--color-text-muted)]">{d.name}</span>
+                    <span
+                      className="w-2.5 h-2.5 rounded-full"
+                      style={{ background: d.color }}
+                    />
+                    <span className="text-[var(--color-text-muted)]">
+                      {d.name}
+                    </span>
                   </div>
                   <span className="font-mono font-bold tabular-nums text-[var(--color-text-primary)]">
                     {d.value}
@@ -476,20 +611,42 @@ export default function DashboardPage() {
           height={240}
         >
           <ResponsiveContainer width="100%" height={240}>
-            <BarChart data={supData} margin={{ top: 4, right: 16, left: -12, bottom: 20 }}>
+            <BarChart
+              data={supData}
+              margin={{ top: 4, right: 16, left: -12, bottom: 20 }}
+            >
               <CartesianGrid {...GRID_STYLE} />
               <XAxis
                 dataKey="name"
                 tick={{ ...AXIS_STYLE, fontSize: 10 }}
-                tickLine={false} axisLine={false}
-                angle={-30} textAnchor="end" height={48}
+                tickLine={false}
+                axisLine={false}
+                angle={-30}
+                textAnchor="end"
+                height={48}
               />
-              <YAxis tick={AXIS_STYLE} tickLine={false} axisLine={false} width={30} />
+              <YAxis
+                tick={AXIS_STYLE}
+                tickLine={false}
+                axisLine={false}
+                width={30}
+              />
               <RechartsTooltip
-                content={<ChartTooltip formatter={(v, n) => n === "มูลค่า" ? formatCurrency(v) : `${v} PO`} />}
+                content={
+                  <ChartTooltip
+                    formatter={(v, n) =>
+                      n === "มูลค่า" ? formatCurrency(v) : `${v} PO`
+                    }
+                  />
+                }
                 cursor={{ fill: "rgba(255,255,255,0.04)" }}
               />
-              <Bar dataKey="PO" fill={COLORS.info} radius={[4, 4, 0, 0]} maxBarSize={32} />
+              <Bar
+                dataKey="PO"
+                fill={COLORS.info}
+                radius={[4, 4, 0, 0]}
+                maxBarSize={32}
+              />
             </BarChart>
           </ResponsiveContainer>
         </ChartCard>
@@ -512,24 +669,48 @@ export default function DashboardPage() {
               <XAxis
                 dataKey="name"
                 tick={{ ...AXIS_STYLE, fontSize: 10 }}
-                tickLine={false} axisLine={false}
-                angle={-25} textAnchor="end" height={44}
+                tickLine={false}
+                axisLine={false}
+                angle={-25}
+                textAnchor="end"
+                height={44}
               />
-              <YAxis tick={AXIS_STYLE} tickLine={false} axisLine={false} width={28} />
+              <YAxis
+                tick={AXIS_STYLE}
+                tickLine={false}
+                axisLine={false}
+                width={28}
+              />
               <RechartsTooltip
                 content={<ChartTooltip formatter={(v) => `${v} ชิ้น`} />}
                 cursor={{ fill: "rgba(255,255,255,0.04)" }}
               />
-              <Legend wrapperStyle={{ fontSize: 11, fontFamily: "var(--font-mono)" }} />
-              <Bar dataKey="available" name="ว่าง"   fill={COLORS.success} radius={[3,3,0,0]} maxBarSize={24} stackId="a" />
-              <Bar dataKey="borrowed"  name="ยืม"    fill={COLORS.brand}   radius={[3,3,0,0]} maxBarSize={24} stackId="a" />
+              <Legend
+                wrapperStyle={{ fontSize: 11, fontFamily: "var(--font-mono)" }}
+              />
+              <Bar
+                dataKey="available"
+                name="ว่าง"
+                fill={COLORS.success}
+                radius={[3, 3, 0, 0]}
+                maxBarSize={24}
+                stackId="a"
+              />
+              <Bar
+                dataKey="borrowed"
+                name="ยืม"
+                fill={COLORS.brand}
+                radius={[3, 3, 0, 0]}
+                maxBarSize={24}
+                stackId="a"
+              />
             </BarChart>
           </ResponsiveContainer>
         </ChartCard>
       </div>
 
       {/* ── Row 4: Low stock alert table ── */}
-      {(overview?.lowStockCount ?? 0) > 0 && (
+      {(overview?.materials?.lowStock ?? 0) > 0 && (
         <LowStockAlert overview={overview} />
       )}
     </div>
@@ -550,19 +731,26 @@ function LowStockAlert({ overview }) {
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
         {items.slice(0, 6).map((item) => (
-          <div key={item.id}
+          <div
+            key={item.id}
             className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg
               bg-[var(--color-surface)] border border-[var(--color-border)]"
           >
             <div className="min-w-0">
-              <p className="text-xs font-mono text-[var(--color-brand)] truncate">{item.code}</p>
-              <p className="text-xs text-[var(--color-text-primary)] truncate">{item.name}</p>
+              <p className="text-xs font-mono text-[var(--color-brand)] truncate">
+                {item.code}
+              </p>
+              <p className="text-xs text-[var(--color-text-primary)] truncate">
+                {item.name}
+              </p>
             </div>
             <div className="text-right shrink-0">
               <p className="text-sm font-bold tabular-nums text-[var(--color-danger)]">
                 {formatNumber(item.currentStock, 2)}
               </p>
-              <p className="text-[10px] text-[var(--color-text-muted)]">/ {formatNumber(item.minStock, 0)} {item.unit}</p>
+              <p className="text-[10px] text-[var(--color-text-muted)]">
+                / {formatNumber(item.minStock, 0)} {item.unit}
+              </p>
             </div>
           </div>
         ))}
