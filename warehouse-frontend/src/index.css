@@ -1,0 +1,196 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300;1,400&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&display=swap");
+@import "tailwindcss";
+
+/* ─── Industrial Dark Design System ──────────────────────────────────────── */
+@theme {
+  /* Colors — Slate-based industrial palette */
+  --color-background:    #0a0c10;
+  --color-surface:       #0f1117;
+  --color-surface-2:     #161b25;
+  --color-surface-3:     #1c2333;
+  --color-border:        #242d3d;
+  --color-border-strong: #2e3a50;
+
+  /* Brand — Amber/Orange industrial accent */
+  --color-brand:         #f59e0b;
+  --color-brand-dim:     #d97706;
+  --color-brand-subtle:  #451a03;
+  --color-brand-muted:   #78350f;
+
+  /* Text */
+  --color-text-primary:  #e2e8f0;
+  --color-text-secondary:#8b9ab0;
+  --color-text-muted:    #4a5568;
+  --color-text-inverse:  #0a0c10;
+
+  /* Status */
+  --color-success:       #10b981;
+  --color-success-subtle:#052e16;
+  --color-warning:       #f59e0b;
+  --color-warning-subtle:#451a03;
+  --color-danger:        #ef4444;
+  --color-danger-subtle: #1a0505;
+  --color-info:          #3b82f6;
+  --color-info-subtle:   #0c1445;
+
+  /* Typography — Industrial feel */
+  --font-display: "DM Mono", "JetBrains Mono", monospace;
+  --font-sans:    "IBM Plex Sans", "DM Sans", system-ui, sans-serif;
+  --font-mono:    "DM Mono", "JetBrains Mono", monospace;
+
+  /* Spacing overrides */
+  --radius-sm:   0.25rem;
+  --radius-md:   0.5rem;
+  --radius-lg:   0.75rem;
+  --radius-xl:   1rem;
+
+  /* Shadows */
+  --shadow-sm:   0 1px 2px 0 rgb(0 0 0 / 0.5);
+  --shadow-md:   0 4px 6px -1px rgb(0 0 0 / 0.6), 0 2px 4px -2px rgb(0 0 0 / 0.4);
+  --shadow-lg:   0 10px 15px -3px rgb(0 0 0 / 0.7), 0 4px 6px -4px rgb(0 0 0 / 0.5);
+  --shadow-glow: 0 0 20px rgb(245 158 11 / 0.15);
+}
+
+/* ─── Google Fonts Import ────────────────────────────────────────────────── */
+
+/* ─── Base Reset ─────────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: dark;
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  min-height: 100dvh;
+  margin: 0;
+}
+
+/* ─── Scrollbar Styling ──────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-surface);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-strong);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted);
+}
+
+/* ─── Selection ──────────────────────────────────────────────────────────── */
+::selection {
+  background: rgb(245 158 11 / 0.2);
+  color: var(--color-brand);
+}
+
+/* ─── Focus Visible ──────────────────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* ─── Utility Classes ────────────────────────────────────────────────────── */
+.font-display { font-family: var(--font-display); }
+.font-mono    { font-family: var(--font-mono); }
+
+/* Glass surface */
+.glass {
+  background: rgb(15 17 23 / 0.8);
+  backdrop-filter: blur(12px) saturate(150%);
+  -webkit-backdrop-filter: blur(12px) saturate(150%);
+  border: 1px solid var(--color-border);
+}
+
+/* Industrial grid background */
+.grid-bg {
+  background-image:
+    linear-gradient(var(--color-border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--color-border) 1px, transparent 1px);
+  background-size: 40px 40px;
+  background-position: -1px -1px;
+}
+
+/* Amber glow on focus/active */
+.glow-amber {
+  box-shadow: 0 0 0 1px var(--color-brand), var(--shadow-glow);
+}
+
+/* Status badge colors */
+.status-draft     { color: var(--color-text-secondary); background: var(--color-surface-3); }
+.status-approved  { color: var(--color-info); background: var(--color-info-subtle); }
+.status-issued    { color: var(--color-success); background: var(--color-success-subtle); }
+.status-cancelled { color: var(--color-danger); background: var(--color-danger-subtle); }
+.status-received  { color: var(--color-success); background: var(--color-success-subtle); }
+.status-pending   { color: var(--color-warning); background: var(--color-warning-subtle); }
+
+/* Scan overlay */
+.scan-line {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--color-brand), transparent);
+  animation: scan 2.5s ease-in-out infinite;
+}
+@keyframes scan {
+  0%   { top: 10%; opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { top: 90%; opacity: 0; }
+}
+
+/* Scan-line for barcode scanner */
+@keyframes scan-line {
+  0%   { top: 8%;  opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { top: 92%; opacity: 0; }
+}
+
+/* Fade in animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in {
+  animation: fadeIn 0.25s ease forwards;
+}
+
+/* Skeleton shimmer */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-2) 25%,
+    var(--color-surface-3) 50%,
+    var(--color-surface-2) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius-md);
+}
+
+/* Number / code display */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono);
+  letter-spacing: 0.025em;
+}
