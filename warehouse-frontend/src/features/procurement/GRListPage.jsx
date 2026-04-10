@@ -23,34 +23,60 @@ export default function GRListPage() {
   const { queryParams, setPage, handleSearch, search } = useTableParams();
   const { data, isLoading, refetch } = useGoodsReceipts(queryParams);
   const { downloadGR, isDownloading } = usePdfDownload();
+  // console.log("GR row sample:", JSON.stringify(data?.data?.[0], null, 2));
+  // แ
 
   const COLUMNS = [
     {
-      key: "grNumber", header: "เลขที่ GR", mono: true, skelWidth: "120px",
-      render: (v) => <span className="font-mono text-xs font-bold text-[var(--color-success)]">{v}</span>,
+      key: "receiptNo",
+      header: "เลขที่ GR",
+      mono: true,
+      skelWidth: "120px",
+      render: (v) => (
+        <span className="font-mono text-xs font-bold text-[var(--color-success)]">
+          {v}
+        </span>
+      ),
     },
     {
-      key: "supplier", header: "ผู้จำหน่าย", skelWidth: "160px",
+      key: "supplier",
+      header: "ผู้จำหน่าย",
+      skelWidth: "160px",
       render: (_, row) => (
         <div>
-          <p className="text-sm font-medium text-[var(--color-text-primary)]">{row.supplier?.name ?? "—"}</p>
-          <p className="text-xs font-mono text-[var(--color-text-muted)]">{row.supplier?.code}</p>
+          <p className="text-sm font-medium text-[var(--color-text-primary)]">
+            {row.supplier?.name ?? "—"}
+          </p>
+          <p className="text-xs font-mono text-[var(--color-text-muted)]">
+            {row.supplier?.code}
+          </p>
         </div>
       ),
     },
     {
-      key: "purchaseOrder", header: "อ้างอิง PO", skelWidth: "120px",
-      render: (_, row) => row.purchaseOrder ? (
-        <button
-          onClick={(e) => { e.stopPropagation(); navigate(`/procurement/po/${row.purchaseOrder.id}`); }}
-          className="font-mono text-xs text-[var(--color-brand)] hover:underline"
-        >
-          {row.purchaseOrder.poNumber}
-        </button>
-      ) : <span className="text-xs text-[var(--color-text-muted)]">—</span>,
+      key: "purchaseOrder",
+      header: "อ้างอิง PO",
+      skelWidth: "120px",
+      render: (_, row) =>
+        row.purchaseOrder ? (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/procurement/po/${row.purchaseOrder.id}`);
+            }}
+            className="font-mono text-xs text-[var(--color-brand)] hover:underline"
+          >
+            {row.purchaseOrder.poNumber}
+          </button>
+        ) : (
+          <span className="text-xs text-[var(--color-text-muted)]">—</span>
+        ),
     },
     {
-      key: "items", header: "รายการ", align: "center", skelWidth: "60px",
+      key: "items",
+      header: "รายการ",
+      align: "center",
+      skelWidth: "60px",
       render: (_, row) => (
         <span className="text-xs font-mono text-[var(--color-text-secondary)]">
           {row.items?.length ?? 0} รายการ
@@ -58,7 +84,11 @@ export default function GRListPage() {
       ),
     },
     {
-      key: "totalAmount", header: "มูลค่ารวม", align: "right", mono: true, skelWidth: "110px",
+      key: "totalAmount",
+      header: "มูลค่ารวม",
+      align: "right",
+      mono: true,
+      skelWidth: "110px",
       render: (v) => (
         <span className="text-sm font-bold tabular-nums text-[var(--color-text-primary)]">
           {formatCurrency(v)}
@@ -66,19 +96,37 @@ export default function GRListPage() {
       ),
     },
     {
-      key: "receivedBy", header: "ผู้รับ", skelWidth: "100px",
-      render: (_, row) => <span className="text-xs text-[var(--color-text-secondary)]">{row.receivedBy?.name ?? "—"}</span>,
+      key: "receivedBy",
+      header: "ผู้รับ",
+      skelWidth: "100px",
+      render: (_, row) => (
+        <span className="text-xs text-[var(--color-text-secondary)]">
+          {row.receiver?.name ?? "—"}
+        </span>
+      ),
     },
     {
-      key: "createdAt", header: "วันที่รับ", skelWidth: "90px",
-      render: (v) => <span className="text-xs font-mono text-[var(--color-text-muted)]">{formatDate(v)}</span>,
+      key: "receivedAt",
+      header: "วันที่รับ",
+      skelWidth: "90px",
+      render: (v) => (
+        <span className="text-xs font-mono text-[var(--color-text-muted)]">
+          {formatDate(v)}
+        </span>
+      ),
     },
     {
-      key: "_pdf", header: "", skelWidth: "40px",
+      key: "_pdf",
+      header: "",
+      skelWidth: "40px",
       render: (_, row) => (
         <Button
-          variant="ghost" size="icon-sm"
-          onClick={(e) => { e.stopPropagation(); downloadGR(row.id); }}
+          variant="ghost"
+          size="icon-sm"
+          onClick={(e) => {
+            e.stopPropagation();
+            downloadGR(row.id);
+          }}
           loading={isDownloading}
           title="ดาวน์โหลด PDF"
         >
