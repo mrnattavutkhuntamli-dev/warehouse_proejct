@@ -48,7 +48,6 @@ export function MaterialForm({ defaultValues, onSuccess, onCancel }) {
   const createMutation = useCreateMaterial();
   const updateMutation = useUpdateMaterial(defaultValues?.id);
   const mutation = isEdit ? updateMutation : createMutation;
-
   const {
     register,
     handleSubmit,
@@ -82,12 +81,13 @@ export function MaterialForm({ defaultValues, onSuccess, onCancel }) {
   }, [defaultValues, reset]);
 
   const onSubmit = async (data) => {
-    const payload = {
-      ...data,
-      maxStock: data.maxStock || null,
-    };
-    await mutation.mutateAsync(isEdit ? payload : payload);
-    onSuccess?.();
+    console.log(data.maxStock);
+    // const payload = {
+    //   ...data,
+    //   maxStock: data.maxStock || null,
+    // };
+    // await mutation.mutateAsync(isEdit ? payload : payload);
+    // onSuccess?.();
   };
 
   return (

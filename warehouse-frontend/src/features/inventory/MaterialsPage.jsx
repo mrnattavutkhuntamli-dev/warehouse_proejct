@@ -51,7 +51,7 @@ export default function MaterialsPage() {
 
   const categories = categoriesData ?? [];
   // const materials = (tab === "low-stock" ? lowStockData : data?.data) ?? [];
-  const materials = (tab === "low-stock" ? lowStockData : data) ?? [];
+  const materials = (tab === "low-stock" ? lowStockData : data?.data) ?? [];
   const pagination = tab === "all" ? data?.pagination : null;
   const lowCount = lowStockData?.length ?? 0;
 
@@ -108,8 +108,9 @@ export default function MaterialsPage() {
       skelWidth: "90px",
       render: (v, row) => {
         const total =
-          row.stocks?.reduce((s, st) => s + (st.quantity ?? 0), 0) ?? null;
-        const isLow = total !== null && total <= v;
+          row.stocks?.reduce((s, st) => s + Number(st.quantity ?? 0), 0) ??
+          null;
+        const isLow = total !== null && total <= Number(v);
         return (
           <div className="text-right">
             {total !== null && (

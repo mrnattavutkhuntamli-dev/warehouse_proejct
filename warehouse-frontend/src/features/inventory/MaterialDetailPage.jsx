@@ -69,7 +69,7 @@ const TX_COLUMNS = [
           )}
         >
           {isIn ? "+" : "-"}
-          {formatNumber(v, 2)} {row.material?.unit}
+          {formatNumber(Number(v), 2)} {row.material?.unit}
         </span>
       );
     },
@@ -131,11 +131,10 @@ export default function MaterialDetailPage() {
     page: txPage,
     limit: 15,
   });
-  console.log(txData);
 
   const stocks = material?.stocks ?? [];
-  const totalStock = stocks.reduce((s, st) => s + (st.quantity ?? 0), 0);
-  const isLow = totalStock <= (material?.minStock ?? 0);
+  const totalStock = stocks.reduce((s, st) => s + Number(st.quantity ?? 0), 0);
+  const isLow = totalStock <= Number(material?.minStock ?? 0);
 
   if (isLoading) {
     return (
@@ -247,7 +246,7 @@ export default function MaterialDetailPage() {
               สต็อกต่ำสุด
             </p>
             <p className="text-2xl font-bold font-mono tabular-nums text-[var(--color-warning)]">
-              {formatNumber(material.minStock, 0)}
+              {formatNumber(Number(material.minStock), 0)}
             </p>
             <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
               {material.unit}
@@ -326,7 +325,7 @@ export default function MaterialDetailPage() {
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-bold tabular-nums text-[var(--color-text-primary)]">
-                      {formatNumber(st.quantity, 2)}
+                      {formatNumber(Number(st.quantity), 2)}
                     </p>
                     <p className="text-[11px] text-[var(--color-text-muted)]">
                       {material.unit}

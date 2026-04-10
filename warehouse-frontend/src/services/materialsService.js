@@ -7,17 +7,22 @@ import { queryKeys } from "./queryKeys";
 // ─── Raw API Functions ────────────────────────────────────────────────────────
 
 export const materialsApi = {
-  list:           (params) => axiosInstance.get(endpoints.materials.list, { params }),
-  byId:           (id)     => axiosInstance.get(endpoints.materials.byId(id)),
-  create:         (data)   => axiosInstance.post(endpoints.materials.create, data),
-  update:         (id, data) => axiosInstance.put(endpoints.materials.update(id), data),
-  remove:         (id)     => axiosInstance.delete(endpoints.materials.remove(id)),
-  lowStock:       (params) => axiosInstance.get(endpoints.materials.lowStock, { params }),
+  list: (params) => axiosInstance.get(endpoints.materials.list, { params }),
+  byId: (id) => axiosInstance.get(endpoints.materials.byId(id)),
+  create: (data) => axiosInstance.post(endpoints.materials.create, data),
+  update: (id, data) => axiosInstance.put(endpoints.materials.update(id), data),
+  remove: (id) => axiosInstance.delete(endpoints.materials.remove(id)),
+  lowStock: (params) =>
+    axiosInstance.get(endpoints.materials.lowStock, { params }),
   categories: {
-    list:   (params) => axiosInstance.get(endpoints.materials.categories.list, { params }),
-    create: (data)   => axiosInstance.post(endpoints.materials.categories.create, data),
-    update: (id, data) => axiosInstance.put(endpoints.materials.categories.update(id), data),
-    remove: (id)     => axiosInstance.delete(endpoints.materials.categories.remove(id)),
+    list: (params) =>
+      axiosInstance.get(endpoints.materials.categories.list, { params }),
+    create: (data) =>
+      axiosInstance.post(endpoints.materials.categories.create, data),
+    update: (id, data) =>
+      axiosInstance.put(endpoints.materials.categories.update(id), data),
+    remove: (id) =>
+      axiosInstance.delete(endpoints.materials.categories.remove(id)),
   },
 };
 
@@ -27,8 +32,11 @@ export const materialsApi = {
 export function useMaterials(params = {}) {
   return useQuery({
     queryKey: queryKeys.materials.list(params),
-    queryFn:  () => materialsApi.list(params),
-    select:   (data) => data.data,
+    queryFn: () => materialsApi.list(params),
+    select: (data) => ({
+      data: data.data,
+      pagination: data.pagination,
+    }),
     staleTime: 30_000, // 30s — stock มีการเปลี่ยนแปลงบ่อย
   });
 }
@@ -37,9 +45,9 @@ export function useMaterials(params = {}) {
 export function useMaterial(id) {
   return useQuery({
     queryKey: queryKeys.materials.detail(id),
-    queryFn:  () => materialsApi.byId(id),
-    select:   (data) => data.data,
-    enabled:  Boolean(id),
+    queryFn: () => materialsApi.byId(id),
+    select: (data) => data.data,
+    enabled: Boolean(id),
   });
 }
 
@@ -47,8 +55,8 @@ export function useMaterial(id) {
 export function useLowStock(params = {}) {
   return useQuery({
     queryKey: queryKeys.materials.lowStock,
-    queryFn:  () => materialsApi.lowStock(params),
-    select:   (data) => data.data,
+    queryFn: () => materialsApi.lowStock(params),
+    select: (data) => data.data,
     staleTime: 60_000,
     refetchInterval: 5 * 60_000, // Auto-refresh ทุก 5 นาที
   });
@@ -58,8 +66,8 @@ export function useLowStock(params = {}) {
 export function useMaterialCategories(params = {}) {
   return useQuery({
     queryKey: queryKeys.materials.categories.list(params),
-    queryFn:  () => materialsApi.categories.list(params),
-    select:   (data) => data.data,
+    queryFn: () => materialsApi.categories.list(params),
+    select: (data) => data.data,
     staleTime: 5 * 60_000,
   });
 }
